@@ -9,10 +9,18 @@ def main(argv):
 
     numHours = int(argv[1])
 
-    simulate(User(1), NUM_SERVICES, TICKET_LENGTH_MINUTES, REQUEST_LAMBDA, numHours*60)
+    if(numHours <= 0):
+        print("Invalid args!\nHours must be a positive integer!\nticketSim.py [# hours to simulate]")
+        exit()
 
-    #for i in range(0,NUM_USERS):
-    #    HELLO = 1
+    ticketsGranted = 0
+
+    for i in range(0,NUM_USERS):
+        ticketsGranted += simulate(User(1), NUM_SERVICES, TICKET_LENGTH_MINUTES, REQUEST_LAMBDA, numHours*60)
+
+    print("Total tickets granted: " + str(ticketsGranted))
+    print("Average tickets per day: " + format(((ticketsGranted/numHours)*24),'.2f'))
+    print("Average tickets per user: " + format((ticketsGranted/NUM_USERS), '.2f'))
 
 
 class User:
@@ -22,19 +30,23 @@ class User:
         self.userID = userID
 
     def requestService(self, serviceID, ticketDuration):
+        ticketGranted = True
         if(serviceID in self.tickets):
             #do nothing
-            print("Already have ticket for service " + str(serviceID))
+            #print("Already have ticket for service " + str(serviceID))
+            ticketGranted = False
         else:
             #add ticket
             self.tickets[serviceID] = Ticket(serviceID, ticketDuration)
-            print("Added a new ticket for service "  + str(serviceID) + " with duration " + str(ticketDuration))
+            #print("Added a new ticket for service "  + str(serviceID) + " with duration " + str(ticketDuration))
+
+        return ticketGranted
 
     def decrementTickets(self, amount):
         for serviceID,ticket in self.tickets.copy().items():
             if(self.tickets[serviceID].decrementTicket(amount)):
                 #ticket expired
-                print("Ticket expired for service " + str(ticket.getServiceID()))
+                #print("Ticket expired for service " + str(ticket.getServiceID()))
                 del self.tickets[serviceID]
 
 
@@ -58,26 +70,29 @@ def simulate(user, numServices, ticketDuration, requestLambda, duration):
     serviceRequested = False
     minutesToRequest = 0
     serviceToRequest = 0
+    ticketsGranted = 0
 
     while(currentMinute < duration):
         if(serviceRequested):
             user.decrementTickets(minutesToRequest)
-            user.requestService(serviceToRequest, ticketDuration)
+            if(user.requestService(serviceToRequest, ticketDuration)):
+                ticketsGranted += 1
 
         minutesToRequest = int(random.expovariate(requestLambda))
         serviceToRequest = random.randint(1,numServices)
         currentMinute += minutesToRequest
-        #currentMinute += 1
         serviceRequested = True
-        print("Time: " + str(currentMinute))
-        #print("User " + str(user.userID) + " requests service " + str(serviceToRequest) + " at time " + str(currentMinute))
+        #print("Time: " + str(currentMinute))
+        
+        
+    return ticketsGranted
 
     
 # constants and python main thing
 
 NUM_SERVICES = 10
 NUM_USERS = 100
-TICKET_LENGTH_MINUTES = 1
+TICKET_LENGTH_MINUTES = 30
 REQUEST_LAMBDA = 0.25
 
 if __name__ == "__main__":
